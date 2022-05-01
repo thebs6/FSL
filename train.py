@@ -161,7 +161,7 @@ def run(args):
 
     val_loader = DataLoader(
         val_dataset,
-        batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=100,
+        batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=1000,
                                   n=args.n_test, k=args.k_test, q=args.q_test),
         num_workers=args.num_workers
     )
