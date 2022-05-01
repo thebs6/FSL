@@ -115,7 +115,7 @@ def val_fun(taskloader, model, optimiser, loss_fun, n_shot, k_way, q_queries, di
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', default='miniImageNet')
+    parser.add_argument('--dataset', default='data/miniImageNet')
     parser.add_argument('--distance', default='l2')
     parser.add_argument('--n-train', default=1, type=int)
     parser.add_argument('--n-test', default=1, type=int)
@@ -129,8 +129,8 @@ def parse_opt():
 
 def run(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    train_dataset = FlyData(phase='train', data_root=f'data/{args.dataset}')
-    val_dataset = FlyData(phase='valid', data_root=f'data/{args.dataset}')
+    train_dataset = FlyData(phase='train', data_root=f'{args.dataset}')
+    val_dataset = FlyData(phase='valid', data_root=f'{args.dataset}')
     train_loader = DataLoader(
         train_dataset,
         batch_sampler=TaskSampler(train_dataset, episodes_per_epoch=100,
