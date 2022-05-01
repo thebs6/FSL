@@ -7,7 +7,8 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset, Sampler
 from torchvision.transforms import transforms
 from tqdm import tqdm
-
+import platform
+plat = platform.system().lower()
 
 class FlyData(Dataset):
     def __init__(self, phase, data_root):
@@ -60,8 +61,12 @@ class FlyData(Dataset):
         for root, folders, files in os.walk(data_folder):
             if len(files) == 0:
                 continue
-            class_name = root.split('\\')[-1]
-            type = root.split('\\')[-2]
+            if plat == 'windows':
+                class_name = root.split('\\')[-1]
+                type = root.split('\\')[-2]
+            else:
+                class_name = root.split('/')[-1]
+                type = root.split('/')[-2]
             for f in files:
                 progress_bar.update(1)
                 images.append({

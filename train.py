@@ -199,6 +199,23 @@ def run_prototype(args):
             save_model(model, args, type='best')
         save_model(model, args, type='last')
 
+def run_relation(args):
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    train_dataset = FlyData(phase='train', data_root=f'{args.dataset_train}')
+    val_dataset = FlyData(phase='valid', data_root=f'{args.dataset_valid}')
+    train_loader = DataLoader(
+        train_dataset,
+        batch_sampler=TaskSampler(train_dataset, episodes_per_epoch=100,
+                                  n=args.n_train, k=args.k_train, q=args.q_train),
+        num_workers=args.num_workers
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=1000,
+                                  n=args.n_test, k=args.k_test, q=args.q_test),
+        num_workers=args.num_workers
+    )
 
 def main():
     args = parse_opt()
