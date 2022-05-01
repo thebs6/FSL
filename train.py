@@ -116,8 +116,8 @@ def val_fun(taskloader, model, optimiser, loss_fun, n_shot, k_way, q_queries, di
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset-train', default='data/miniImageNet/train')
-    parser.add_argument('--dataset-valid', default='data/miniImageNet/valid')
+    parser.add_argument('--dataset-train', default='data/dataset1/train')
+    parser.add_argument('--dataset-valid', default='data/dataset1/valid')
     parser.add_argument('--distance', default='l2')
     parser.add_argument('--n-train', default=1, type=int)
     parser.add_argument('--n-test', default=1, type=int)
@@ -142,11 +142,10 @@ def save_logs(logs, args):
     logs_csv.to_csv(f'{args.logs_folder}/{dataset_name}_{args.n_train}shot_{args.k_train}way_log.csv')
 
 
-def save_model(model, args):
+def save_model(model, args, type='best'):
     if not os.path.exists(args.model_folder):
         os.mkdir(args.model_folder)
-    torch.save(model,
-               f'{args.model_folder}/{args.n_train}shot_{args.k_train}way.pth')
+    torch.save(model,f'{args.model_folder}/{args.n_train}shot_{args.k_train}way_{type}.pth')
 
 def run(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -174,6 +173,7 @@ def run(args):
 
     epoch_num = args.epoch_num
     logs = []
+    last_acc = 0.0
     for epoch in range(1, epoch_num + 1):
         batch_log_bar = tqdm(total=len(train_loader), desc='Epoch {} / {}'.format(epoch, epoch_num), position=0)
         batch_logs = dict()
@@ -192,10 +192,12 @@ def run(args):
                       args.n_test, args.k_test, args.q_test, 'l2')
         log['epoch'] = epoch
         logs.append(log)
+        save_logs(logs, args)
 
-        save_model(model, args)
-
-    save_logs(logs, args)
+        if log['val_acc'] > last_acc:
+            last_acc = log['val_acc']
+            save_model(model, args, type='best')
+        save_model(model, args, type='last')
 
 
 def main():

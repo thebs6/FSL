@@ -61,10 +61,12 @@ class FlyData(Dataset):
             if len(files) == 0:
                 continue
             class_name = root.split('\\')[-1]
+            type = root.split('\\')[-2]
             for f in files:
                 progress_bar.update(1)
                 images.append({
                     'phase': phase,
+                    'type' : type,
                     'class_name': class_name,
                     'filepath': os.path.join(root, f)
                 })
@@ -94,14 +96,14 @@ class TaskSampler(Sampler):
                 df = self.dataset.df[self.dataset.df['class_id'].isin(episode_classes)]
                 support_k = {k: None for k in episode_classes}
                 for k in episode_classes:
-                    support = df[df['class_id'] == k].sample(self.n)
+                    support = df[(df['type'] == 'support') & (df['class_id'] == k)].sample(self.n)
                     support_k[k] = support
 
                     for i, s in support.iterrows():
                         batch.append(s['id'])
 
                 for k in episode_classes:
-                    query = df[(df['class_id'] == k) & (~df['id'].isin(support_k[k]['id']))].sample(self.q)
+                    query = df[(df['type'] == 'query') & (df['class_id'] == k)].sample(self.q)
                     for i, q in query.iterrows():
                         batch.append(q['id'])
             yield np.stack(batch)
