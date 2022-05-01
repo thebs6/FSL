@@ -50,7 +50,7 @@ class FlyData(Dataset):
 
     def index_df(self, phase, data_root):
         images = []
-        data_folder = f'{data_root}/{phase}'
+        data_folder = data_root
         set_len = 0
         print('Indexing {}...'.format(phase))
         for root, folders, files in os.walk(data_folder):
