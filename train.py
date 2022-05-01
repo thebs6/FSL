@@ -147,7 +147,7 @@ def save_model(model, args, type='best'):
         os.mkdir(args.model_folder)
     torch.save(model,f'{args.model_folder}/{args.n_train}shot_{args.k_train}way_{type}.pth')
 
-def run(args):
+def run_prototype(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_dataset = FlyData(phase='train', data_root=f'{args.dataset_train}')
     val_dataset = FlyData(phase='valid', data_root=f'{args.dataset_valid}')
@@ -202,7 +202,7 @@ def run(args):
 
 def main():
     args = parse_opt()
-    run(args)
+    run_prototype(args)
 
 
 if __name__ == "__main__":
