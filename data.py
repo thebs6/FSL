@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 from torchvision.transforms import transforms
 from tqdm import tqdm
 import platform
+
 plat = platform.system().lower()
+
 
 class FlyData(Dataset):
     def __init__(self, phase, data_root):
@@ -24,14 +26,13 @@ class FlyData(Dataset):
         self.class_name_to_id = {uc: idx for idx, uc in enumerate(self.unique_class)}
         self.df = self.df.assign(class_id=self.df['class_name'].apply(lambda c: self.class_name_to_id[c]))
 
-
         self.dataid_to_filepath = self.df.to_dict()['filepath']
         self.dataid_to_class_id = self.df.to_dict()['class_id']
 
         # Setup transforms
         self.transform = transforms.Compose([
             transforms.CenterCrop(224),
-            transforms.Resize(84),
+            transforms.Resize(128),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -71,16 +72,17 @@ class FlyData(Dataset):
                 progress_bar.update(1)
                 images.append({
                     'phase': phase,
-                    'type' : type,
+                    'type': type,
                     'class_name': class_name,
                     'filepath': os.path.join(root, f)
                 })
         progress_bar.close()
         return images
 
+
 class TaskSampler(Sampler):
-    def __init__(self, dataset, episodes_per_epoch, n, k, q, num_tasks = 1):
-        super(TaskSampler,self).__init__(dataset)
+    def __init__(self, dataset, episodes_per_epoch, n, k, q, num_tasks=1):
+        super(TaskSampler, self).__init__(dataset)
         self.episodes_per_epoch = episodes_per_epoch
         self.dataset = dataset
         if num_tasks < 1:
@@ -90,6 +92,7 @@ class TaskSampler(Sampler):
         self.n = n
         self.q = q
         self.num_tasks = num_tasks
+
     def __len__(self):
         return self.episodes_per_epoch
 
@@ -112,6 +115,7 @@ class TaskSampler(Sampler):
                     for i, q in query.iterrows():
                         batch.append(q['id'])
             yield np.stack(batch)
+
 
 def prepare_nshot_task(batch, k, q):
     x, y = batch

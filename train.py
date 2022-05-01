@@ -4,11 +4,12 @@ import os.path
 import pandas as pd
 import torch.cuda
 from torch.optim import Adam
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import FlyData, TaskSampler, prepare_nshot_task
-from model import prototype_encoder
+from model import prototype_encoder, CNNEncoder, RelationNetwork
 
 
 def proto_net_episode(model, optimiser, loss_fn, x, y, n_shot, k_way, distance, train):
@@ -145,7 +146,8 @@ def save_logs(logs, args):
 def save_model(model, args, type='best'):
     if not os.path.exists(args.model_folder):
         os.mkdir(args.model_folder)
-    torch.save(model,f'{args.model_folder}/{args.n_train}shot_{args.k_train}way_{type}.pth')
+    torch.save(model, f'{args.model_folder}/{args.n_train}shot_{args.k_train}way_{type}.pth')
+
 
 def run_prototype(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -199,23 +201,122 @@ def run_prototype(args):
             save_model(model, args, type='best')
         save_model(model, args, type='last')
 
-def run_relation(args):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    train_dataset = FlyData(phase='train', data_root=f'{args.dataset_train}')
-    val_dataset = FlyData(phase='valid', data_root=f'{args.dataset_valid}')
-    train_loader = DataLoader(
-        train_dataset,
-        batch_sampler=TaskSampler(train_dataset, episodes_per_epoch=100,
-                                  n=args.n_train, k=args.k_train, q=args.q_train),
-        num_workers=args.num_workers
-    )
 
-    val_loader = DataLoader(
-        val_dataset,
-        batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=1000,
-                                  n=args.n_test, k=args.k_test, q=args.q_test),
-        num_workers=args.num_workers
-    )
+# def relation_net_episode(feature, relation, x, y, n_shot, k_way, train=True):
+#     FEATURE_DIM = 64
+#     RELATION_DIM = 8
+#
+#     feature_encoder = feature['net']
+#     feature_encoder_scheduler = feature['scheduler']
+#     feature_encoder_optim = feature['optimiser']
+#
+#     relation_network = relation['net']
+#     feature_encoder_scheduler = relation['scheduler']
+#     relation_encoder_optim = relation['optimiser']
+#     if train:
+#         feature_encoder.train()
+#         feature_encoder_optim.zero_grad()
+#         relation_network.train()
+#         relation_encoder_optim.zero_grad()
+#     else:
+#         feature_encoder.eval()
+#         feature_encoder_optim.eval()
+#
+#     feature_encoder()
+#     embeddings = model(x)
+#
+#     support = x[:n_shot * k_way]
+#     sample_features = feature_encoder(support)
+#     sample_features = sample_features.view(k_way, n_shot, FEATURE_DIM, 30, 30)
+#     query = embeddings[n_shot * k_way:]
+#     prototypes = support.reshape(k_way, n_shot, -1).mean(dim=1)
+#     distance = pairwise_distances(query, prototypes, distance)
+#
+#     log_p_y = (-distance).log_softmax(dim=1)
+#     loss = loss_fn(log_p_y, y)
+#
+#     y_pred = (-distance).softmax(dim=1)
+#
+#     if train:
+#         loss.backward()
+#         feature_encoder_optim.step()
+#         relation_encoder_optim.step()
+#     else:
+#         pass
+#
+#     return loss, y_pred
+
+
+# def run_relation(args):
+#     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#     train_dataset = FlyData(phase='train', data_root=f'{args.dataset_train}')
+#     val_dataset = FlyData(phase='valid', data_root=f'{args.dataset_valid}')
+#     train_loader = DataLoader(
+#         train_dataset,
+#         batch_sampler=TaskSampler(train_dataset, episodes_per_epoch=100,
+#                                   n=args.n_train, k=args.k_train, q=args.q_train),
+#         num_workers=args.num_workers
+#     )
+#
+#     val_loader = DataLoader(
+#         val_dataset,
+#         batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=1000,
+#                                   n=args.n_test, k=args.k_test, q=args.q_test),
+#         num_workers=args.num_workers
+#     )
+#
+#     FEATURE_DIM = 64
+#     RELATION_DIM = 8
+#     LEARNING_RATE = 0.001
+#     epoch_num = 500
+#
+#     feature_encoder = CNNEncoder().cuda()
+#     relation_network = RelationNetwork(FEATURE_DIM, RELATION_DIM).cuda()
+#
+#     feature_encoder_optim = torch.optim.Adam(feature_encoder.parameters(), lr=LEARNING_RATE)
+#     feature_encoder_scheduler = StepLR(feature_encoder_optim, step_size=100000, gamma=0.5)
+#     relation_network_optim = torch.optim.Adam(relation_network.parameters(), lr=LEARNING_RATE)
+#     relation_network_scheduler = StepLR(relation_network_optim, step_size=100000, gamma=0.5)
+#
+#     feature = {
+#         'net': feature_encoder,
+#         'optimiser': feature_encoder_optim,
+#         'scheduler': feature_encoder_scheduler,
+#     }
+#
+#     relation = {
+#         'net': relation_network,
+#         'optimiser': feature_encoder_optim,
+#         'scheduler': relation_network_scheduler,
+#     }
+#
+#     logs = []
+#     last_acc = 0.0
+#     for epoch in range(1, epoch_num + 1):
+#         batch_log_bar = tqdm(total=len(train_loader), desc='Epoch {} / {}'.format(epoch, epoch_num), position=0)
+#         batch_logs = dict()
+#         for batch_index, batch in enumerate(train_loader):
+#             x, y = prepare_nshot_task(batch, k=args.k_train, q=args.q_train)
+#             loss, y_pred = relation_net_episode(feature, relation, x, y,
+#                                                 args.n_train, args.k_train, train=True)
+#             # batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
+#
+#             batch_logs['loss'] = loss.item()
+#             batch_log_bar.set_postfix(batch_logs)
+#             batch_log_bar.update(1)
+#         batch_log_bar.close()
+#
+#         # log = val_fun(val_loader, model, optimiser, loss_fn,
+#         #               args.n_test, args.k_test, args.q_test, 'l2')
+#         # log['epoch'] = epoch
+#         # logs.append(log)
+#         # save_logs(logs, args)
+#         #
+#         # if log['val_acc'] > last_acc:
+#         #     last_acc = log['val_acc']
+#         #     save_model(model, args, type='best')
+#         # save_model(model, args, type='last')
+
 
 def main():
     args = parse_opt()
