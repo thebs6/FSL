@@ -1,4 +1,5 @@
 import argparse
+import os.path
 
 import pandas as pd
 import torch.cuda
@@ -76,7 +77,6 @@ NAMED_METRICS = {
     'categorical_accuracy': categorical_accuracy
 }
 
-
 with torch.no_grad():
     def batch_metrics(model, y_pred, y, metrics, batch_logs):
         model.eval()
@@ -113,6 +113,7 @@ def val_fun(taskloader, model, optimiser, loss_fun, n_shot, k_way, q_queries, di
     print(f'evaluated, val_acc:{logs["val_acc"]}, val_loss:{logs["val_loss"]}')
     return logs
 
+
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset-train', default='data/miniImageNet/train')
@@ -125,8 +126,27 @@ def parse_opt():
     parser.add_argument('--q-train', default=5, type=int)
     parser.add_argument('--q-test', default=1, type=int)
     parser.add_argument('--num_workers', default=0, type=int)
+    parser.add_argument('--epoch_num', default=1, type=int)
+    parser.add_argument('--logs_folder', default='logs', type=str)
+    parser.add_argument('--model_folder', default='model', type=str)
+
     args = parser.parse_args()
     return args
+
+
+def save_logs(logs, args):
+    logs_csv = pd.DataFrame(logs)
+    if not os.path.exists(args.logs_folder):
+        os.mkdir(args.logs_folder)
+    dataset_name = args.dataset_train.split('/')[-2]
+    logs_csv.to_csv(f'{args.logs_folder}/{dataset_name}_{args.n_train}shot_{args.k_train}way_log.csv')
+
+
+def save_model(model, args):
+    if not os.path.exists(args.model_folder):
+        os.mkdir(args.model_folder)
+    torch.save(model,
+               f'{args.model_folder}/{args.n_train}shot_{args.k_train}way.pth')
 
 def run(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -152,7 +172,7 @@ def run(args):
     loss_fn = torch.nn.NLLLoss().cuda()
     metrics = ['categorical_accuracy']
 
-    epoch_num = 2
+    epoch_num = args.epoch_num
     logs = []
     for epoch in range(1, epoch_num + 1):
         batch_log_bar = tqdm(total=len(train_loader), desc='Epoch {} / {}'.format(epoch, epoch_num), position=0)
@@ -166,21 +186,22 @@ def run(args):
             batch_logs['loss'] = loss.item()
             batch_log_bar.set_postfix(batch_logs)
             batch_log_bar.update(1)
+        batch_log_bar.close()
+
         log = val_fun(val_loader, model, optimiser, loss_fn,
-                       args.n_test, args.k_test, args.q_test, 'l2')
+                      args.n_test, args.k_test, args.q_test, 'l2')
         log['epoch'] = epoch
         logs.append(log)
-    logs_csv = pd.DataFrame(logs)
-    logs_csv.to_csv(f'data{args.dataset}_{args.n_train}shot_{args.k_train}way_log.csv')
+
+        save_model(model, args)
+
+    save_logs(logs, args)
+
 
 def main():
     args = parse_opt()
     run(args)
 
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
