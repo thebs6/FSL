@@ -167,6 +167,7 @@ def run(args):
             batch_log_bar.update(1)
         log = val_fun(val_loader, model, optimiser, loss_fn,
                        args.n_test, args.k_test, args.q_test, 'l2')
+        log['epoch'] = epoch
         logs.append(log)
     logs_csv = pd.DataFrame(logs)
     logs_csv.to_csv(f'data{args.dataset}_{args.n_train}shot_{args.k_train}way_log.csv')
@@ -177,44 +178,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # train_dataset = FlyData(phase='train', data_root='data/miniImageNet')
-    # val_dataset = FlyData(phase='valid', data_root='data/miniImageNet')
-    # train_loader = DataLoader(
-    #     train_dataset,
-    #     batch_sampler=TaskSampler(train_dataset, episodes_per_epoch=100, n=1, k=10, q=5),
-    #     num_workers=0
-    # )
-    #
-    # val_loader = DataLoader(
-    #     val_dataset,
-    #     batch_sampler=TaskSampler(val_dataset, episodes_per_epoch=100, n=1, k=5, q=1),
-    #     num_workers=0
-    # )
-    #
-    # model = prototype_encoder(3)
-    # model = model.to(device, dtype=torch.double)
-    # optimiser = Adam(model.parameters(), lr=1e-3)
-    # loss_fn = torch.nn.NLLLoss().cuda()
-    # metrics = ['categorical_accuracy']
-    #
-    # epoch_num = 1000
-    # epoch_log_bar = tqdm(total=epoch_num)
-    # for epoch in range(1, epoch_num+1):
-    #     batch_log_bar = tqdm(total=len(train_loader), desc='Epoch {} / {}'.format(epoch, epoch_num), position=0)
-    #     batch_logs = dict()
-    #     for batch_index, batch in enumerate(train_loader):
-    #         x, y = prepare_nshot_task(batch, k=10, q=5)
-    #         loss, y_pred = proto_net_episode(model, optimiser, loss_fn, x, y,
-    #                                          1, 10, 'l2', train=True)
-    #         batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
-    #
-    #         batch_logs['loss'] = loss.item()
-    #         batch_log_bar.set_postfix(batch_logs)
-    #         batch_log_bar.update(1)
-    #     logs = val_fun(val_loader, model, optimiser, loss_fn, 1, 5, 1, 'l2')
-    #     logs['epoch'] = epoch
-    #     # epoch_log_bar.set_postfix(Epoch=epoch, Loss=logs['loss'], Acc=logs['val_acc'])
 
 
 
